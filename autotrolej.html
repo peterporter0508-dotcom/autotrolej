@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<title>Autotrolej Live Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+    --bg: rgba(18, 22, 33, 0.88);
+    --border: rgba(255,255,255,0.09);
+    --text: #f3f4f6;
+    --muted: #9ca3af;
+    --blue: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --orange: #f59e0b;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: #0f111a;
+    color: var(--text);
+    overflow: hidden;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 350px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    z-index: 2000;
+    background: var(--bg);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 0 20px 45px rgba(0,0,0,.5);
+}
+
+.sidebar {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    bottom: 20px;
+    width: 440px;
+    z-index: 3000;
+    background: var(--bg);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 22px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 20px 45px rgba(0,0,0,.55);
+}
+
+.header {
+    font-size: 19px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.badge {
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.08);
+    cursor: pointer;
+    color: var(--muted);
+}
+
+.badge.logged {
+    color: var(--green);
+    background: rgba(16,185,129,.15);
+}
+
+.status {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.04);
+    padding: 10px;
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 14px;
+}
+
+.status span {
+    color: var(--text);
+    font-weight: 600;
+}
+
+input, select, button {
+    width: 100%;
+    margin-top: 8px;
+    padding: 11px 14px;
+    border-radius: 13px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    color: var(--text);
+    font-family: inherit;
+    box-sizing: border-box;
+    font-size: 13px;
+}
+
+select option {
+    background: #181b26;
+}
+
+button {
+    border: none;
+    background: var(--blue);
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59,130,246,.2);
+}
+
+button:hover {
+    filter: brightness(1.08);
+}
+
+button.secondary {
+    background: rgba(255,255,255,.1);
+    box-shadow: none;
+}
+
+button.green {
+    background: var(--green);
+}
+
+button.red {
+    background: var(--red);
+}
+
+.hr {
+    border-top: 1px solid rgba(255,255,255,.08);
+    margin: 15px 0;
+}
+
+.small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.ok {
+    color: var(--green);
+    font-weight: 700;
+}
+
+.late {
+    color: var(--red);
+    font-weight: 700;
+}
+
+.searchBox {
+    position: relative;
+}
+
+.suggestions {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #181b26;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 9999;
+    box-shadow: 0 15px 35px rgba(0,0,0,.45);
+}
+
+.suggestion {
+    padding: 10px 13px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.suggestion:hover {
+    background: rgba(255,255,255,.06);
+    color: var(--blue);
+}
+
+.layers {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px;
+    display: flex;
+    gap: 6px;
+    backdrop-filter: blur(14px);
+}
+
+.layers button {
+    width: auto;
+    margin: 0;
+    padding: 7px 12px;
+    font-size: 11px;
+}
+
+.layers button.active {
+    background: var(--blue);
+}
+
+.alert {
+    display: none;
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4000;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #111;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-weight: 700;
+    box-shadow: 0 12px 30px rgba(245,158,11,.3);
+}
+
+.busIcon {
+    color: white;
+    font-weight: 800;
+    font-size: 12px;
+    border-radius: 99px;
+    padding: 5px 12px;
+    border: 2px solid rgba(255,255,255,.85);
+    box-shadow: 0 8px 18px rgba(0,0,0,.45);
+    white-space: nowrap;
+    transform-origin: center;
+}
+
+.busIdle {
+    opacity: .55;
+    filter: grayscale(.4);
+    border-style: dashed;
+}
+
+.stationDot {
+    width: 9px;
+    height: 9px;
+    background: white;
+    border: 3px solid var(--blue);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(59,130,246,.8);
+}
+
+.liveRow {
+    display: grid;
+    grid-template-columns: 58px 1fr 70px;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    align-items: center;
+    font-size: 13px;
+}
+
+.stationRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    font-size: 13px;
+}
+
+.trip {
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding-top: 12px;
+    margin-top: 14px;
+}
+
+.authOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: rgba(10,12,18,.65);
+    backdrop-filter: blur(9px);
+    align-items: center;
+    justify-content: center;
+}
+
+.authBox {
+    width: 370px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.6);
+}
+
+.leaflet-popup-content-wrapper {
+    background: #181b26 !important;
+    color: white !important;
+    border-radius: 15px !important;
+    border: 1px solid rgba(255,255,255,.1);
+}
+
+.leaflet-popup-tip {
+    background: #181b26 !important;
+}
+
+.leaflet-popup-content {
+    font-family: "Plus Jakarta Sans", sans-serif !important;
+    font-size: 13px !important;
+}
+
+.leaflet-popup-content button {
+    padding: 7px 10px !important;
+    margin-top: 6px !important;
+    font-size: 11px !important;
+}
+
+@media (max-width: 850px) {
+    .panel {
+        width: calc(100vw - 24px);
+        left: 12px;
+        top: 12px;
+        max-height: 45vh;
+    }
+
+    .sidebar {
+        width: calc(100vw - 24px);
+        left: 12px;
+        right: 12px;
+        top: auto;
+        height: 55vh;
+    }
+
+    .layers {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="authOverlay" id="authOverlay">
+    <div class="authBox">
+        <h2 id="authTitle">Prijava</h2>
+        <p class="small">Sinkronizacija omiljenih linija, stanica i teme.</p>
+        <input id="authEmail" type="email" placeholder="E mail">
+        <input id="authPassword" type="password" placeholder="Lozinka">
+        <button id="authSubmit">Prijavi se</button>
+        <button id="authSwitch" class="secondary">Nemam račun</button>
+        <button id="authClose" class="secondary">Zatvori</button>
+    </div>
+</div>
+
+<div class="alert" id="alertBanner">Demo obavijest: moguće promjene ruta zbog radova.</div>
+
+<div class="layers" id="layers">
+    <button id="layerDark" onclick="setLayer('dark')">Tamna</button>
+    <button id="layerLight" onclick="setLayer('light')">Svijetla</button>
+    <button id="layerSat" onclick="setLayer('sat')">Satelit</button>
+</div>
+
+<div class="panel">
+    <div class="header">
+        <span>Autotrolej Live Pro</span>
+        <span class="badge" id="userBadge" onclick="openAuth()">Profil</span>
+    </div>
+
+    <div class="status">
+        <div>Status<br><span id="status">Učitavanje</span></div>
+        <div>Autobusa<br><span id="count">0</span></div>
+        <div>Ažurirano<br><span id="lastUpdate">nikad</span></div>
+        <div>Lokacija<br><span id="locStatus">isključena</span></div>
+    </div>
+
+    <button id="locBtn">Uključi moju lokaciju</button>
+
+    <select id="radiusSelect">
+        <option value="300">Radijus 300 m</option>
+        <option value="500" selected>Radijus 500 m</option>
+        <option value="1000">Radijus 1000 m</option>
+    </select>
+
+    <select id="lineFilter">
+        <option value="all">Sve linije</option>
+    </select>
+
+    <button class="secondary" id="scheduleBtn">Vozni red odabrane linije</button>
+    <button class="secondary" id="nearestBtn">Live board najbliže stanice</button>
+    <button class="secondary" id="stationsBtn">Prikaži stanice</button>
+    <button class="secondary" id="autoBtn">Auto osvježavanje: uključeno</button>
+
+    <div class="hr"></div>
+
+    <div class="searchBox">
+        <input id="searchInput" placeholder="Pretraži liniju ili stanicu" autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+    </div>
+    <button id="searchBtn">Pretraži</button>
+
+    <div class="hr"></div>
+
+    <input id="fromInput" placeholder="Od, npr. Delta">
+    <input id="toInput" placeholder="Do, npr. Kampus">
+    <button id="tripBtn">Planiraj put</button>
+
+    <div class="hr"></div>
+
+    <button class="green" id="favoritesBtn">Omiljeno</button>
+    <button class="secondary" id="historyBtn">Povijest</button>
+    <button class="secondary" id="alertsBtn">Obavijesti</button>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <button class="secondary" onclick="closeSidebar()">Zatvori</button>
+    <div id="sidebarContent"></div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script>
+const SUPABASE_URL = "https://ajrjphpdvfibxaljnuxx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqcmpwaHBkdmZpYnhhbGpudXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MzYzODUsImV4cCI6MjA5NzExMjM4NX0.WpcOtE4Dm_xjZT7ZXHXGFsRrAaFOpi2L-sZqhFjBTrg";
+
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
+
+const API = "https://api.autotrolej.hr/api/v1/voznired";
+const WS_URL = "wss://api.autotrolej.hr/api/Hub/location";
+
+const map = L.map("map", { zoomControl: false }).setView([45.3271, 14.4422], 12);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+
+const layers = {
+    dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }),
+    light: L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }),
+    sat: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })
+};
+
+let currentLayer = localStorage.getItem("theme") || "dark";
+layers[currentLayer].addTo(map);
+document.getElementById("layer" + cap(currentLayer)).classList.add("active");
+
+let linije = {};
+let stanice = {};
+let buses = {};
+let autoRefresh = true;
+let showStations = false;
+let selectedLine = localStorage.getItem("lastLine") || "all";
+let followedBusId = null;
+
+let userLat = null;
+let userLng = null;
+let userMarker = null;
+let userAccuracy = null;
+let radiusCircle = null;
+
+let currentUser = null;
+let cloudPrefs = {
+    theme_preference: currentLayer,
+    favorite_lines: [],
+    favorite_stations: []
+};
+
+const stationCluster = L.markerClusterGroup();
+const routeLayer = L.layerGroup().addTo(map);
+
+const statusEl = document.getElementById("status");
+const countEl = document.getElementById("count");
+const lastUpdateEl = document.getElementById("lastUpdate");
+const locStatus = document.getElementById("locStatus");
+const lineFilter = document.getElementById("lineFilter");
+const sidebar = document.getElementById("sidebar");
+const sidebarContent = document.getElementById("sidebarContent");
+const suggestions = document.getElementById("suggestions");
+const searchInput = document.getElementById("searchInput");
+const userBadge = document.getElementById("userBadge");
+
+function cap(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function setLayer(name) {
+    Object.values(layers).forEach(l => map.removeLayer(l));
+    layers[name].addTo(map);
+
+    document.querySelectorAll(".layers button").forEach(b => b.classList.remove("active"));
+    document.getElementById("layer" + cap(name)).classList.add("active");
+
+    currentLayer = name;
+    localStorage.setItem("theme", name);
+
+    cloudPrefs.theme_preference = name;
+    saveCloudPrefs();
+}
+
+function lineColor(line) {
+    const n = String(line).replace(".", "");
+    if (["1","1A","1B","2","2A","3","3A"].includes(n)) return "#3b82f6";
+    if (["4","4A","5","5A","6","7","7A","8"].includes(n)) return "#10b981";
+    if (["10","10A","11","12","12A","13","14","15"].includes(n)) return "#a855f7";
+    if (["18","18A","18B","19","20","21","22","23","23A"].includes(n)) return "#f97316";
+    if (["25","26","27","29","29A","30","32","32A","34","35","36","37"].includes(n)) return "#ef4444";
+    return "#64748b";
+}
+
+function busIcon(line, angle, idle) {
+    return L.divIcon({
+        className: "",
+        html: `<div class="busIcon ${idle ? "busIdle" : ""}"
+               style="background:${lineColor(line)}; transform:rotate(${angle || 0}deg)">
+               ${line} ➤
+               </div>`,
+        iconSize: [68, 30]
+    });
+}
+
+function stationIcon() {
+    return L.divIcon({
+        className: "",
+        html: `<div class="stationDot"></div>`,
+        iconSize: [14, 14]
+    });
+}
+
+function formatTime(x) {
+    return new Date(x).toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function nowText() {
+    return new Date().toLocaleTimeString("hr-HR");
+}
+
+function dist(a, b, c, d) {
+    return map.distance([a, b], [c, d]);
+}
+
+function formatDist(m) {
+    return m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1) + " km";
+}
+
+function bearing(lat1, lng1, lat2, lng2) {
+    const y = Math.sin((lng2 - lng1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+    const x =
+        Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+        Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.cos((lng2 - lng1) * Math.PI / 180);
+
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function smoothMove(marker, from, to, ms) {
+    const start = performance.now();
+
+    function step(t) {
+        const k = Math.min((t - start) / ms, 1);
+        const lat = from.lat + (to.lat - from.lat) * k;
+        const lng = from.lng + (to.lng - from.lng) * k;
+        marker.setLatLng([lat, lng]);
+
+        if (k < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+}
+
+function distanceFromMe(lat, lng) {
+    if (userLat === null || userLng === null) {
+        return `<span class="small">Uključi lokaciju za udaljenost od tebe.</span>`;
+    }
+
+    const d = dist(userLat, userLng, lat, lng);
+    const min = Math.max(1, Math.round(d / 420));
+
+    return `
+        <b>Udaljenost od mene:</b> ${formatDist(d)}<br>
+        <b>Gruba procjena:</b> oko ${min} min<br>
+    `;
+}
+
+function popupHtml(busId, key, lat, lng) {
+    const l = linije[key];
+    const line = l ? l.brojLinije : key;
+    const route = l ? l.naziv : "Nepoznata ruta";
+
+    return `
+        <b style="font-size:15px">Linija ${line}</b><br>
+        <span class="small">${route}</span><br><br>
+        ${distanceFromMe(lat, lng)}
+        <button onclick="showSchedule('${key}')">Vozni red</button>
+        <button onclick="drawRoute('${key}')">Prikaži trasu</button>
+        <button onclick="followBus('${busId}')">Prati bus</button>
+        <button onclick="shareBus('${busId}')">Podijeli</button>
+        <button onclick="toggleFavorite('line','${line}','Linija ${line}')" class="green">★ Omiljeno</button>
+        <span class="small">Bus ID: ${busId} | Interni ID: ${key}</span>
+    `;
+}
+
+async function loadBaseData() {
+    statusEl.textContent = "Dohvaćam API";
+
+    const [linijeData, staniceData] = await Promise.all([
+        fetch(API + "/linije").then(r => r.json()),
+        fetch(API + "/stanice").then(r => r.json())
+    ]);
+
+    linije = linijeData.res || {};
+    stanice = staniceData.res || {};
+
+    const uniqueLines = [...new Set(Object.values(linije).map(l => l.brojLinije))]
+        .sort((a, b) => String(a).localeCompare(String(b), "hr", { numeric: true }));
+
+    uniqueLines.forEach(line => {
+        const o = document.createElement("option");
+        o.value = line;
+        o.textContent = "Linija " + line;
+        if (line === selectedLine) o.selected = true;
+        lineFilter.appendChild(o);
+    });
+
+    buildStationMarkers();
+}
+
+function buildStationMarkers() {
+    stationCluster.clearLayers();
+
+    Object.values(stanice).forEach(s => {
+        const m = L.marker([s.gpsY, s.gpsX], { icon: stationIcon() });
+        m.bindPopup(`
+            <b>${s.naziv}</b><br>
+            <button onclick="showStationBoard(${s.id})">Live board</button>
+            <button onclick="toggleFavorite('station','${s.id}','${s.naziv}')" class="green">★ Omiljeno</button>
+        `);
+        stationCluster.addLayer(m);
+    });
+}
+
+function updateVisibleBuses() {
+    let visible = 0;
+
+    Object.values(buses).forEach(b => {
+        const show = selectedLine === "all" || b.lineNumber === selectedLine;
+
+        if (show) {
+            b.marker.addTo(map);
+            visible++;
+        } else {
+            map.removeLayer(b.marker);
+        }
+    });
+
+    countEl.textContent = visible;
+}
+
+function connectWs() {
+    statusEl.textContent = "Spajanje";
+
+    const ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => statusEl.innerHTML = "<span class='ok'>Spojeno</span>";
+
+    ws.onclose = () => {
+        statusEl.innerHTML = "<span class='late'>Prekinuto</span>";
+        setTimeout(connectWs, 4000);
+    };
+
+    ws.onerror = () => statusEl.innerHTML = "<span class='late'>Greška</span>";
+
+    ws.onmessage = e => {
+        if (!autoRefresh) return;
+
+        const rows = e.data.split("\n");
+
+        rows.forEach(row => {
+            if (!row.trim()) return;
+
+            const p = row.split(";");
+            if (p.length < 6) return;
+
+            const busId = p[0];
+            const lat = parseFloat(p[3]);
+            const lng = parseFloat(p[4]);
+            const key = p[5];
+
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const lineNumber = linije[key]?.brojLinije || key;
+            let angle = 0;
+            let idle = false;
+
+            if (buses[busId]) {
+                angle = bearing(buses[busId].lat, buses[busId].lng, lat, lng);
+                idle = buses[busId].lat === lat && buses[busId].lng === lng;
+            }
+
+            if (!buses[busId]) {
+                const marker = L.marker([lat, lng], {
+                    icon: busIcon(lineNumber, angle, idle)
+                }).bindPopup(popupHtml(busId, key, lat, lng));
+
+                buses[busId] = { marker, busId, key, lineNumber, lat, lng };
+            } else {
+                const b = buses[busId];
+                const from = b.marker.getLatLng();
+                const to = L.latLng(lat, lng);
+
+                smoothMove(b.marker, from, to, 900);
+                b.marker.setIcon(busIcon(lineNumber, angle, idle));
+                b.marker.setPopupContent(popupHtml(busId, key, lat, lng));
+
+                b.key = key;
+                b.lineNumber = lineNumber;
+                b.lat = lat;
+                b.lng = lng;
+            }
+
+            if (followedBusId === busId) {
+                map.panTo([lat, lng], { animate: true });
+            }
+        });
+
+        lastUpdateEl.textContent = nowText();
+        updateVisibleBuses();
+    };
+}
+
+function closeSidebar() {
+    sidebar.style.display = "none";
+}
+
+function openSidebar(html) {
+    sidebar.style.display = "block";
+    sidebarContent.innerHTML = html;
+}
+
+async function showSchedule(uniqueId) {
+    if (!uniqueId || uniqueId === "all") {
+        alert("Odaberi liniju.");
+        return;
+    }
+
+    openSidebar("<h2>Učitavanje voznog reda...</h2>");
+
+    try {
+        const data = await fetch(API + "/polasciLinija?uniqueLinijaId=" + encodeURIComponent(uniqueId)).then(r => r.json());
+        const line = data.res;
+
+        if (!line || !line.polazakList?.length) {
+            openSidebar("<h2>Nema voznog reda.</h2>");
+            return;
+        }
+
+        saveHistory("line", uniqueId, "Linija " + line.brojLinije);
+        drawRoute(uniqueId, false);
+
+        const byTrip = {};
+        line.polazakList.forEach(p => {
+            if (!byTrip[p.voznjaId]) byTrip[p.voznjaId] = [];
+            byTrip[p.voznjaId].push(p);
+        });
+
+        const trips = Object.values(byTrip)
+            .map(t => t.sort((a, b) => new Date(a.polazak) - new Date(b.polazak)))
+            .sort((a, b) => new Date(a[0].polazak) - new Date(b[0].polazak));
+
+        const now = new Date();
+        const upcoming = trips.filter(t => new Date(t[0].polazak) >= now).slice(0, 6);
+
+        let html = `
+            <h2>Linija ${line.brojLinije}</h2>
+            <p class="small">${line.naziv}</p>
+            <button class="green" onclick="toggleFavorite('line','${line.brojLinije}','Linija ${line.brojLinije}')">★ Spremi liniju</button>
+            <h3>Smjerovi</h3>
+        `;
+
+        Object.entries(linije)
+            .filter(([k, l]) => l.brojLinije === line.brojLinije)
+            .forEach(([k, l]) => {
+                html += `<button class="secondary" onclick="showSchedule('${k}')">${l.smjerNaziv} | ${l.naziv}</button>`;
+            });
+
+        html += `<h3>Sljedeći polasci</h3>`;
+
+        if (!upcoming.length) html += `<p class="small">Nema više polazaka danas.</p>`;
+
+        upcoming.forEach(trip => {
+            html += `<div class="trip"><b>Polazak: ${formatTime(trip[0].polazak)}</b>`;
+
+            trip.forEach(p => {
+                const s = stanice[p.stanicaId];
+                html += `
+                    <div class="stationRow">
+                        <span>${s ? s.naziv : "Stanica " + p.stanicaId}</span>
+                        <b>${formatTime(p.polazak)}</b>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+        });
+
+        openSidebar(html);
+
+    } catch (err) {
+        console.error(err);
+        openSidebar("<h2>Greška pri učitavanju voznog reda.</h2>");
+    }
+}
+
+async function drawRoute(uniqueId, open = true) {
+    routeLayer.clearLayers();
+
+    const data = await fetch(API + "/polasciLinija?uniqueLinijaId=" + encodeURIComponent(uniqueId)).then(r => r.json());
+    const line = data.res;
+
+    if (!line?.polazakList?.length) return;
+
+    const firstTripId = line.polazakList[0].voznjaId;
+
+    const trip = line.polazakList
+        .filter(p => p.voznjaId === firstTripId)
+        .sort((a, b) => new Date(a.polazak) - new Date(b.polazak));
+
+    const points = trip
+        .map(p => stanice[p.stanicaId])
+        .filter(Boolean)
+        .map(s => [s.gpsY, s.gpsX]);
+
+    if (points.length < 2) return;
+
+    const poly = L.polyline(points, {
+        color: lineColor(line.brojLinije),
+        weight: 5,
+        opacity: .85
+    }).addTo(routeLayer);
+
+    points.forEach(pt => {
+        L.circleMarker(pt, {
+            radius: 5,
+            color: "#fff",
+            fillColor: lineColor(line.brojLinije),
+            fillOpacity: 1,
+            weight: 2
+        }).addTo(routeLayer);
+    });
+
+    map.fitBounds(poly.getBounds(), { padding: [70, 70] });
+
+    if (open) showSchedule(uniqueId);
+}
+
+async function showStationBoard(stationId) {
+    openSidebar("<h2>Učitavanje stanice...</h2>");
+
+    try {
+        const data = await fetch(API + "/polasciStanica?stanicaId=" + stationId).then(r => r.json());
+        const st = data.res;
+
+        if (!st) {
+            openSidebar("<h2>Nema podataka.</h2>");
+            return;
+        }
+
+        saveHistory("station", stationId, st.naziv);
+
+        const now = new Date();
+        const list = (st.polazakList || [])
+            .filter(p => new Date(p.polazak) >= now)
+            .slice(0, 25);
+
+        let html = `
+            <h2>${st.naziv}</h2>
+            <button class="green" onclick="toggleFavorite('station','${st.id}','${st.naziv}')">★ Spremi stanicu</button>
+            <h3>Virtualna tabla dolazaka</h3>
+        `;
+
+        if (!list.length) html += `<p class="small">Nema dolazaka.</p>`;
+
+        list.forEach(p => {
+            const l = linije[p.uniqueLinijaId];
+            const mins = Math.max(0, Math.round((new Date(p.polazak) - now) / 60000));
+
+            html += `
+                <div class="liveRow">
+                    <b style="color:${lineColor(l ? l.brojLinije : p.linijaId)}">${l ? l.brojLinije : p.linijaId}</b>
+                    <span>${l ? l.naziv : p.uniqueLinijaId}</span>
+                    <b class="${mins <= 4 ? "late" : "ok"}">${mins} min</b>
+                </div>
+            `;
+        });
+
+        html += `<p class="small">Kašnjenje je demo prikaz jer API ne šalje stvarni delay.</p>`;
+
+        openSidebar(html);
+
+    } catch (err) {
+        console.error(err);
+        openSidebar("<h2>Greška kod stanice.</h2>");
+    }
+}
+
+function nearestStation() {
+    if (userLat === null || userLng === null) return null;
+
+    let best = null;
+    let bestDist = Infinity;
+
+    Object.values(stanice).forEach(s => {
+        const d = dist(userLat, userLng, s.gpsY, s.gpsX);
+        if (d < bestDist) {
+            best = s;
+            bestDist = d;
+        }
+    });
+
+    return best;
+}
+
+function updateRadius() {
+    if (userLat === null || userLng === null) return;
+
+    const r = Number(document.getElementById("radiusSelect").value);
+
+    if (radiusCircle) map.removeLayer(radiusCircle);
+
+    radiusCircle = L.circle([userLat, userLng], {
+        radius: r,
+        color: "#3b82f6",
+        fillColor: "#3b82f6",
+        fillOpacity: .08
+    }).addTo(map);
+}
+
+function followBus(id) {
+    followedBusId = followedBusId === id ? null : id;
+    const b = buses[id];
+
+    if (b) {
+        map.setView([b.lat, b.lng], 16);
+        b.marker.openPopup();
+    }
+}
+
+function shareBus(id) {
+    const url = location.href.split("#")[0] + "#bus=" + encodeURIComponent(id);
+
+    navigator.clipboard.writeText(url)
+        .then(() => alert("Link kopiran."))
+        .catch(() => prompt("Kopiraj link:", url));
+}
+
+function saveHistory(type, value, label) {
+    let h = JSON.parse(localStorage.getItem("history") || "[]");
+    h = h.filter(x => x.value !== value);
+    h.unshift({ type, value, label });
+    h = h.slice(0, 10);
+    localStorage.setItem("history", JSON.stringify(h));
+}
+
+function localFavs() {
+    return JSON.parse(localStorage.getItem("favorites") || "[]");
+}
+
+function saveLocalFavs(favs) {
+    localStorage.setItem("favorites", JSON.stringify(favs));
+}
+
+function getAllFavorites() {
+    const local = localFavs();
+
+    if (!currentUser) return local;
+
+    const cloud = [
+        ...(cloudPrefs.favorite_lines || []).map(x => ({ type: "line", id: x.id, name: x.name })),
+        ...(cloudPrefs.favorite_stations || []).map(x => ({ type: "station", id: x.id, name: x.name }))
+    ];
+
+    return cloud.length ? cloud : local;
+}
+
+function toggleFavorite(type, id, name) {
+    if (currentUser) {
+        const key = type === "line" ? "favorite_lines" : "favorite_stations";
+        let arr = cloudPrefs[key] || [];
+
+        if (arr.some(x => String(x.id) === String(id))) {
+            arr = arr.filter(x => String(x.id) !== String(id));
+        } else {
+            const custom = prompt("Naziv favorita:", name) || name;
+            arr.push({ id, name: custom });
+        }
+
+        cloudPrefs[key] = arr;
+        saveCloudPrefs();
+        return;
+    }
+
+    let favs = localFavs();
+
+    if (favs.some(f => f.type === type && String(f.id) === String(id))) {
+        favs = favs.filter(f => !(f.type === type && String(f.id) === String(id)));
+    } else {
+        const custom = prompt("Naziv favorita:", name) || name;
+        favs.push({ type, id, name: custom });
+    }
+
+    saveLocalFavs(favs);
+}
+
+async function checkUser() {
+    if (!supabaseClient) return;
+
+    const { data } = await supabaseClient.auth.getSession();
+
+    if (data.session) {
+        currentUser = data.session.user;
+        userBadge.textContent = currentUser.email.split("@")[0];
+        userBadge.classList.add("logged");
+        await loadCloudPrefs();
+    }
+}
+
+async function loadCloudPrefs() {
+    if (!currentUser || !supabaseClient) return;
+
+    let { data, error } = await supabaseClient
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .single();
+
+    if (error && error.code === "PGRST116") {
+        await supabaseClient.from("user_preferences").insert({
+            user_id: currentUser.id,
+            theme_preference: currentLayer,
+            favorite_lines: [],
+            favorite_stations: []
+        });
+        return;
+    }
+
+    if (!data) return;
+
+    cloudPrefs = {
+        theme_preference: data.theme_preference || currentLayer,
+        favorite_lines: data.favorite_lines || [],
+        favorite_stations: data.favorite_stations || []
+    };
+
+    if (cloudPrefs.theme_preference) {
+        setLayer(cloudPrefs.theme_preference);
+    }
+}
+
+async function saveCloudPrefs() {
+    if (!currentUser || !supabaseClient) return;
+
+    await supabaseClient.from("user_preferences").upsert({
+        user_id: currentUser.id,
+        theme_preference: currentLayer,
+        favorite_lines: cloudPrefs.favorite_lines || [],
+        favorite_stations: cloudPrefs.favorite_stations || [],
+        updated_at: new Date().toISOString()
+    });
+}
+
+function openAuth() {
+
+    if (currentUser) {
+        if (confirm("Odjaviti se?")) {
+            supabaseClient.auth.signOut().then(() => location.reload());
+        }
+        return;
+    }
+
+    document.getElementById("authOverlay").style.display = "flex";
+}
+
+let authMode = "login";
+
+document.getElementById("authSwitch").onclick = () => {
+    authMode = authMode === "login" ? "register" : "login";
+    document.getElementById("authTitle").textContent = authMode === "login" ? "Prijava" : "Registracija";
+    document.getElementById("authSubmit").textContent = authMode === "login" ? "Prijavi se" : "Registriraj se";
+    document.getElementById("authSwitch").textContent = authMode === "login" ? "Nemam račun" : "Imam račun";
+};
+
+document.getElementById("authClose").onclick = () => {
+    document.getElementById("authOverlay").style.display = "none";
+};
+
+document.getElementById("authSubmit").onclick = async () => {
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+
+    if (!email || !password) return alert("Upiši e mail i lozinku.");
+
+    let result;
+
+    if (authMode === "login") {
+        result = await supabaseClient.auth.signInWithPassword({ email, password });
+    } else {
+        result = await supabaseClient.auth.signUp({ email, password });
+    }
+
+    if (result.error) {
+        alert(result.error.message);
+    } else {
+        location.reload();
+    }
+};
+
+function setupSearch() {
+    searchInput.addEventListener("input", () => {
+        const q = searchInput.value.trim().toLowerCase();
+        suggestions.innerHTML = "";
+
+        if (q.length < 1) {
+            suggestions.style.display = "none";
+            return;
+        }
+
+        let items = [];
+
+        Object.entries(linije).forEach(([key, l]) => {
+            const text = `${l.brojLinije} ${l.naziv}`.toLowerCase();
+            if (text.includes(q)) {
+                items.push({ type: "line", key, label: `🚌 Linija ${l.brojLinije} | ${l.naziv}` });
+            }
+        });
+
+        Object.values(stanice).forEach(s => {
+            if (s.naziv && s.naziv.toLowerCase().includes(q)) {
+                items.push({ type: "station", id: s.id, label: `🚏 ${s.naziv}` });
+            }
+        });
+
+        if (!items.length) {
+            suggestions.style.display = "none";
+            return;
+        }
+
+        suggestions.style.display = "block";
+
+        items.slice(0, 9).forEach(item => {
+            const div = document.createElement("div");
+            div.className = "suggestion";
+            div.textContent = item.label;
+
+            div.onclick = () => {
+                suggestions.style.display = "none";
+                searchInput.value = item.label;
+
+                if (item.type === "line") {
+                    selectedLine = linije[item.key].brojLinije;
+                    lineFilter.value = selectedLine;
+                    localStorage.setItem("lastLine", selectedLine);
+                    updateVisibleBuses();
+                    showSchedule(item.key);
+                } else {
+                    const s = stanice[item.id];
+                    map.setView([s.gpsY, s.gpsX], 16);
+                    showStationBoard(item.id);
+                }
+            };
+
+            suggestions.appendChild(div);
+        });
+    });
+
+    document.addEventListener("click", e => {
+        if (e.target !== searchInput) suggestions.style.display = "none";
+    });
+}
+
+document.getElementById("locBtn").onclick = () => {
+    if (!navigator.geolocation) return alert("Preglednik ne podržava lokaciju.");
+
+    locStatus.textContent = "tražim";
+
+    navigator.geolocation.watchPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        locStatus.textContent = "uključena";
+
+        if (!userMarker) {
+            userMarker = L.circleMarker([userLat, userLng], {
+                radius: 8,
+                color: "#fff",
+                fillColor: "#3b82f6",
+                fillOpacity: 1
+            }).addTo(map).bindPopup("Moja lokacija");
+
+            map.setView([userLat, userLng], 15);
+        } else {
+            userMarker.setLatLng([userLat, userLng]);
+        }
+
+        if (userAccuracy) map.removeLayer(userAccuracy);
+
+        userAccuracy = L.circle([userLat, userLng], {
+            radius: pos.coords.accuracy || 30,
+            color: "#3b82f6",
+            fillColor: "#3b82f6",
+            fillOpacity: .1
+        }).addTo(map);
+
+        updateRadius();
+
+        Object.values(buses).forEach(b => {
+            b.marker.setPopupContent(popupHtml(b.busId, b.key, b.lat, b.lng));
+        });
+
+    }, () => {
+        locStatus.textContent = "odbijena";
+        alert("Lokacija nije uključena. Pokreni preko localhosta.");
+    }, {
+        enableHighAccuracy: true,
+        maximumAge: 5000
+    });
+};
+
+document.getElementById("radiusSelect").onchange = updateRadius;
+
+lineFilter.onchange = () => {
+    selectedLine = lineFilter.value;
+    localStorage.setItem("lastLine", selectedLine);
+    updateVisibleBuses();
+};
+
+document.getElementById("scheduleBtn").onclick = () => {
+    if (selectedLine === "all") return alert("Odaberi liniju.");
+
+    const key = Object.keys(linije).find(k => linije[k].brojLinije === selectedLine);
+    if (key) showSchedule(key);
+};
+
+document.getElementById("nearestBtn").onclick = () => {
+    const s = nearestStation();
+    if (!s) return alert("Prvo uključi lokaciju.");
+    showStationBoard(s.id);
+};
+
+document.getElementById("stationsBtn").onclick = () => {
+    showStations = !showStations;
+
+    if (showStations) {
+        map.addLayer(stationCluster);
+        document.getElementById("stationsBtn").textContent = "Sakrij stanice";
+    } else {
+        map.removeLayer(stationCluster);
+        document.getElementById("stationsBtn").textContent = "Prikaži stanice";
+    }
+};
+
+document.getElementById("autoBtn").onclick = () => {
+    autoRefresh = !autoRefresh;
+    document.getElementById("autoBtn").textContent = "Auto osvježavanje: " + (autoRefresh ? "uključeno" : "isključeno");
+};
+
+document.getElementById("searchBtn").onclick = () => {
+    const first = suggestions.querySelector(".suggestion");
+    if (first) first.click();
+};
+
+document.getElementById("tripBtn").onclick = async () => {
+    const from = document.getElementById("fromInput").value.trim().toLowerCase();
+    const to = document.getElementById("toInput").value.trim().toLowerCase();
+
+    const a = Object.values(stanice).find(s => s.naziv && s.naziv.toLowerCase().includes(from));
+    const b = Object.values(stanice).find(s => s.naziv && s.naziv.toLowerCase().includes(to));
+
+    if (!a || !b) {
+        openSidebar("<h2>Planer puta</h2><p>Nisam našao jednu od stanica.</p>");
+        return;
+    }
+
+    openSidebar("<h2>Tražim direktne linije...</h2>");
+
+    const [pa, pb] = await Promise.all([
+        fetch(API + "/polasciStanica?stanicaId=" + a.id).then(r => r.json()),
+        fetch(API + "/polasciStanica?stanicaId=" + b.id).then(r => r.json())
+    ]);
+
+    const aa = pa.res?.polazakList || [];
+    const bb = pb.res?.polazakList || [];
+
+    const direct = [];
+
+    aa.forEach(x => {
+        const match = bb.find(y =>
+            y.voznjaId === x.voznjaId &&
+            new Date(y.polazak) > new Date(x.polazak)
+        );
+
+        if (match) {
+            direct.push({ from: x, to: match, line: linije[x.uniqueLinijaId] });
+        }
+    });
+
+    let html = `
+        <h2>Planer puta</h2>
+        <b>Od:</b> ${a.naziv}<br>
+        <b>Do:</b> ${b.naziv}<br><br>
+    `;
+
+    if (!direct.length) {
+        html += `<p>Nema direktne linije u današnjim podacima. Presjedanja treba kasnije dodati kao posebni algoritam.</p>`;
+    } else {
+        direct.slice(0, 8).forEach(d => {
+            html += `
+                <div class="trip">
+                    <b>Linija ${d.line ? d.line.brojLinije : d.from.linijaId}</b><br>
+                    ${d.line ? d.line.naziv : ""}<br>
+                    <span>${formatTime(d.from.polazak)} → ${formatTime(d.to.polazak)}</span>
+                    <button onclick="showSchedule('${d.from.uniqueLinijaId}')">Otvori liniju</button>
+                </div>
+            `;
+        });
+    }
+
+    map.fitBounds([[a.gpsY, a.gpsX], [b.gpsY, b.gpsX]], { padding: [80, 80] });
+    openSidebar(html);
+};
+
+document.getElementById("favoritesBtn").onclick = () => {
+    const favs = getAllFavorites();
+
+    let html = "<h2>Omiljeno</h2>";
+
+    if (!favs.length) html += "<p class='small'>Nema favorita.</p>";
+
+    favs.forEach(f => {
+        html += `<button class="secondary" onclick="openFavorite('${f.type}','${f.id}')">★ ${f.name}</button>`;
+    });
+
+    openSidebar(html);
+};
+
+function openFavorite(type, id) {
+    if (type === "station") showStationBoard(id);
+
+    if (type === "line") {
+        selectedLine = id;
+        lineFilter.value = id;
+        updateVisibleBuses();
+
+        const key = Object.keys(linije).find(k => linije[k].brojLinije === id);
+        if (key) showSchedule(key);
+    }
+}
+
+document.getElementById("historyBtn").onclick = () => {
+    const h = JSON.parse(localStorage.getItem("history") || "[]");
+
+    let html = "<h2>Povijest</h2>";
+
+    if (!h.length) html += "<p class='small'>Nema povijesti.</p>";
+
+    h.forEach(x => {
+        html += `<button class="secondary" onclick="openHistory('${x.type}','${x.value}')">${x.label}</button>`;
+    });
+
+    openSidebar(html);
+};
+
+function openHistory(type, value) {
+    if (type === "line") showSchedule(value);
+    if (type === "station") showStationBoard(value);
+}
+
+document.getElementById("alertsBtn").onclick = () => {
+    const banner = document.getElementById("alertBanner");
+    banner.style.display = banner.style.display === "block" ? "none" : "block";
+
+    openSidebar(`
+        <h2>Obavijesti</h2>
+        <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);padding:12px;border-radius:14px;color:#f59e0b">
+            <b>Demo:</b> API trenutno nema javni endpoint za prometne obavijesti.
+        </div>
+    `);
+};
+
+map.on("click", e => {
+    let best = null;
+    let bestD = Infinity;
+
+    Object.values(stanice).forEach(s => {
+        const d = dist(e.latlng.lat, e.latlng.lng, s.gpsY, s.gpsX);
+        if (d < bestD) {
+            bestD = d;
+            best = s;
+        }
+    });
+
+    if (best && bestD < 800) showStationBoard(best.id);
+});
+
+async function init() {
+    await checkUser();
+    await loadBaseData();
+    setupSearch();
+
+    if (selectedLine !== "all") lineFilter.value = selectedLine;
+
+    connectWs();
+
+    if (location.hash.startsWith("#bus=")) {
+        followedBusId = decodeURIComponent(location.hash.replace("#bus=", ""));
+    }
+}
+
+init();
+</script>
+
+</body>
+</html>
