@@ -1,0 +1,130 @@
+@media (max-width: 850px) {
+  html, body {
+    min-height: 100%;
+    overflow: hidden;
+  }
+
+  #map {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  /* Compact floating status card for mobile */
+  .panel {
+    left: 10px;
+    top: 10px;
+    width: auto;
+    max-width: 260px;
+    max-height: none;
+    padding: 12px;
+    border-radius: 18px;
+    overflow: visible;
+    z-index: 2200;
+  }
+
+
+  /* By default (collapsed) hide all panel children except header and status */
+  .panel:not(.mobile-expanded) > * {
+    display: none;
+  }
+
+  .panel:not(.mobile-expanded) .header,
+  .panel:not(.mobile-expanded) .status {
+    display: block;
+  }
+
+  .panel .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+
+  .panel .logo {
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .panel .status {
+    font-size: 12px;
+    padding: 6px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .panel .status span {
+    display: block;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* Explicitly hide other interactive elements inside panel */
+  .panel button,
+  .panel select,
+  .panel input,
+  .panel .row,
+  .panel .searchBox,
+  .panel .hr {
+    display: none !important;
+  }
+
+  /* Mobile FAB (floating action button) */
+  .mobile-fab {
+    position: fixed;
+    /* place above Leaflet bottom-right controls (use safe-area inset) */
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    z-index: 2300;
+    cursor: pointer;
+  }
+
+  /* Expanded mobile panel (slides up from bottom) */
+  .panel.mobile-expanded {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    width: auto;
+    max-width: none;
+    height: 80vh;
+    max-height: 80vh;
+    padding: 12px;
+    border-radius: 18px;
+    overflow: auto;
+    z-index: 2250;
+    display: block !important;
+  }
+
+  /* When expanded, show all children inside panel */
+  .panel.mobile-expanded > * {
+    display: block !important;
+  }
+
+  /* Ensure header remains styled when expanded */
+  .panel.mobile-expanded .header {
+    margin-bottom: 10px;
+  }
+}
