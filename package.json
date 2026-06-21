@@ -1,0 +1,23 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "Neovisna web aplikacija za praćenje vozila Autotroleja u stvarnom vremenu.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peterporter0508-dotcom/autotrolej.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/peterporter0508-dotcom/autotrolej/issues"
+  },
+  "homepage": "https://github.com/peterporter0508-dotcom/autotrolej#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
